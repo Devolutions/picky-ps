@@ -1,4 +1,4 @@
-function Register-Certificate(
+function Request-Certificate(
     [Parameter(Mandatory=$true)]
     [string]$PickyRealm,
     [Parameter(Mandatory=$true)]
@@ -31,4 +31,4 @@ function Register-Certificate(
         -Body $csr_der
 }
 
-Export-ModuleMember -Function Register-Certificate
+Export-ModuleMember -Function Request-Certificate
