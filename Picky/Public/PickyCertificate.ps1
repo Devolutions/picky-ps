@@ -1,6 +1,6 @@
 function Request-Certificate(
     [Parameter(Mandatory=$true)]
-    [string]$PickyRealm,
+    [string]$Subject,
     [Parameter(Mandatory=$true)]
     [string]$PickyApiKey,
     [string]$PickyUrl
@@ -10,7 +10,7 @@ function Request-Certificate(
     }
 
     $key_size = 2048
-    $subject = "CN=${PickyRealm}"
+    $subject = "CN=${Subject}"
     $rsa_key = [System.Security.Cryptography.RSA]::Create($key_size)
     $certRequest = [System.Security.Cryptography.X509Certificates.CertificateRequest]::new(
         $subject, $rsa_key,

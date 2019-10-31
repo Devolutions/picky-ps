@@ -77,14 +77,21 @@ Stop Picky Server, and wait for server to stop:
 PS > Stop-PickyServer
 ----
 
+Restart Picky Server, with the same parameters than Start-PickyServer:
+
+[source, sh]
+----
+PS > Restart-PickyServer -PickyApiKey 123456 -PickyRealm Wayk.net   
+----
+
 == Certificate Management
 
-=== Register Certificate
-Picky sign a CSR with his root CA, with the command `Register-Certificate`, a CSR will be created and send to Picky Server to be signed, the signed certificate is returned.
+=== Request Certificate
+Picky sign a CSR with his root CA, with the command `Request-Certificate`, a CSR will be created and send to Picky Server to be signed, the signed certificate is returned.
 
 The parameters are needed:
 
-- `PickyRealm`, the Realm of your Picky Server
+- `Subject`, the subject of your CSR for Picky Server
 
 - `PickyApiKey`, the Api Key of your Picky Server.
 
@@ -93,7 +100,7 @@ The parameters are needed:
 
 [source, sh]
 ----
-PS > Register-Certificate -PickyRealm Wayk.net -PickyApiKey 123456
+PS > Request-Certificate -Subject MySubject -PickyApiKey 123456
 ----
 
 The use will be returned as a result.

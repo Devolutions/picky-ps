@@ -31,41 +31,75 @@ function Start-PickyServer(
         $PickyDatabaseUrl = 'mongodb://picky-mongo:27017'
     }
 
-    & 'docker' 'run' '-d' '--network=picky' '--name' 'picky-mongo' 'library/mongo:4.1-bionic'
-    [void](WaitForContainerRunning('picky-mongo'))
+    [void](Create-Network)
 
-    & 'docker' 'run' '-p' "$PickyPort`:$PickyPort" '-d' '--network=picky' '--name' 'picky-server'`
-        '-e' "PICKY_REALM=$PickyRealm" `
-        '-e' "PICKY_API_KEY=$PickyApiKey" `
-        '-e' "PICKY_BACKEND=$PickyBackend" `
-        '-e' "PICKY_DATABASE_URL=$PickyDatabaseUrl" `
-        "$PickyDockerImage"
+    $mongo = $(docker container ls -qf "name=picky-mongo")
+    if(!($mongo)){
+        & 'docker' 'run' '-d' '--network=picky' '--name' 'picky-mongo' 'library/mongo:4.1-bionic'
+        [void](WaitForContainerRunning('picky-mongo'))
+    }
 
-    [void](WaitForContainerRunning('picky-server'))
+    $server = $(docker container ls -qf "name=picky-server")
+    if(!($server)){
+        & 'docker' 'run' '-p' "$PickyPort`:$PickyPort" '-d' '--network=picky' '--name' 'picky-server'`
+            '-e' "PICKY_REALM=$PickyRealm" `
+            '-e' "PICKY_API_KEY=$PickyApiKey" `
+            '-e' "PICKY_BACKEND=$PickyBackend" `
+            '-e' "PICKY_DATABASE_URL=$PickyDatabaseUrl" `
+            "$PickyDockerImage"
 
-    $s = 0
-    $code = 400
-    while($s -lt 30){
-        Start-Sleep -Seconds 2
-        try{
-            $s = $s + 2
-            $result = Invoke-WebRequest -Uri "$PickyUrl/health" -Method GET
-            $code = $result.StatusCode
-            if($code -eq 200){
-                break;
+        [void](WaitForContainerRunning('picky-server'))
+
+        $s = 0
+        $code = 400
+        while($s -lt 30){
+            Start-Sleep -Seconds 2
+            try{
+                $s = $s + 2
+                $result = Invoke-WebRequest -Uri "$PickyUrl/health" -Method GET
+                $code = $result.StatusCode
+                if($code -eq 200){
+                    break;
+                }
             }
-        }
-        catch{
-            #miam
+            catch{
+                #miam
+            }
         }
     }
 }
 
 function Stop-PickyServer(){
-    & docker stop picky-mongo
-    & docker container rm picky-mongo
-    & docker stop picky-server
-    & docker container rm picky-server
+    $server = $(docker container ls -qf "name=picky-server")
+    $mongo = $(docker container ls -qf "name=picky-mongo")
+
+    if($mongo){
+        & docker stop picky-mongo
+        & docker container rm picky-mongo
+    }
+
+    if($server){
+        & docker stop picky-server
+        & docker container rm picky-server
+    }
+}
+
+function Restart-PickyServer(
+    [string]$PickyUrl,
+    [string]$PickyApiKey,
+    [string]$PickyDockerImage,
+    [string]$PickyRealm,
+    [string]$PickyBackend,
+    [string]$PickyDatabaseUrl){
+    Stop-PickyServer
+    Start-PickyServer $PickyUrl $PickyApiKey $PickyDockerImage $PickyRealm $PickyBackend $PickyDatabaseUrl
+}   
+
+function Create-Network{
+    $network = $(docker network ls -qf "name=picky")
+    if(!($network)){
+        docker network create picky
+    }
 }
 
 function WaitForContainerRunning{
@@ -86,4 +120,4 @@ function WaitForContainerRunning{
     }
 }
 
-Export-ModuleMember -Function Start-PickyServer, Stop-PickyServer
+Export-ModuleMember -Function Start-PickyServer, Stop-PickyServer, Restart-PickyServer
