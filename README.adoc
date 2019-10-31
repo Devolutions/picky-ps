@@ -1,1 +1,126 @@
-Todo
+:toc:
+:toclevels: 4
+
+= Picky PowerShell Cmdlet
+
+Picky is a PowerShell cmdlet for Picky Server, to sign the certificate etc.
+
+== Installation
+
+=== PowerShell Core
+On Windows, the regular PowerShell already installed can be used. On macOS and Linux, you need PowerShell Core 6.0:
+
+PowerShell Core 6.0::
+https://github.com/PowerShell/PowerShell#get-powershell
+
+To launch a PowerShell Core terminal, use the `pwsh` command.
+
+==== Installation from Source
+
+To build the Cmdlet, you will need the .NET Core 2.2 SDK and the .NET Framework 4.7.2 SDK. The latter is only needed if you want to support PowerShell for Windows.
+
+ .NET Core 2.2 SDK::
+https://dotnet.microsoft.com/download
+
+ .NET Framework 4.7.2 SDK::
+https://dotnet.microsoft.com/download/dotnet-framework/net472
+
+From PowerShell, run the build.ps1 script, and then load the resulting PowerShell module:
+
+[source,sh]
+----
+PS > Import-Module ./Picky.psd1 -Force
+----
+
+=== Docker Installation
+
+Picky need to run it's server inside Docker containers. The PowerShell cmdlet simplifies the usage of Docker for users not familiar with it. For more advanced users, the cmdlet can export a usable docker-compose configuration file.
+
+On Windows, the recommended option is to use https://hub.docker.com/editions/community/docker-ce-desktop-windows[Docker Desktop for Windows]. This version of Docker requires Hyper-V for Linux container support.
+
+For bind mount support with Linux containers on Windows, you need to go in the Docker settings and https://rominirani.com/docker-on-windows-mounting-host-directories-d96f3f056a2c[select the required drives from the "Shared Drives" section].
+
+On macOS and Linux, follow the instructions here to install Docker CE correctly. It is recommended to use the official Docker packages instead as documented in the https://docs.docker.com/install/[Docker install page].
+
+On Linux, do not forget to https://docs.docker.com/install/linux/linux-postinstall/[add your user to the docker group] after installation.
+
+To confirm that Docker is up and running, use the `docker run hello-world` command. If you don't see the "Hello from Docker!" message, something is wrong with your Docker installation.
+
+== Running
+
+Start Picky, and wait for server to start: 
+
+There is facultative parameters:
+
+- `PickyUrl`, the url with the port for your Picky Server, the default value is 'http://127.0.0.1:12345'
+
+- `PickyApiKey`, the api key for the Picky Server, the default value is a guid
+
+- `PickyDockerImage`, the docker image to pull for Picky Server, the default value is 'devolutions/picky:3.3.0-buster-dev'
+
+- `PickyRealm`, the realm of the Picky Server, the default value is 'wayk.net'
+
+- `PickyBackend`, what to use to store the backend of Picky Server, the default value is 'mongodb'
+
+- `PickyDatabaseUrl`, the database url of the backend of Picky Server, the default value is 'mongodb://picky-mongo:27017'
+
+[source, sh]
+----
+PS > Start-PickyServer -PickyApiKey 123456 -PickyRealm Wayk.net   
+----
+
+
+Stop Picky Server, and wait for server to stop:
+
+[source, sh]
+----
+PS > Stop-PickyServer
+----
+
+== Certificate Management
+
+=== Register Certificate
+Picky sign a CSR with his root CA, with the command `Register-Certificate`, a CSR will be created and send to Picky Server to be signed, the signed certificate is returned.
+
+The parameters are needed:
+
+- `PickyRealm`, the Realm of your Picky Server
+
+- `PickyApiKey`, the Api Key of your Picky Server.
+
+- `PickyUrl`, (Facultative) the url with the port for your Picky Server, the default value is 'http://127.0.0.1:12345'
+
+
+[source, sh]
+----
+PS > Register-Certificate -PickyRealm Wayk.net -PickyApiKey 123456
+----
+
+The use will be returned as a result.
+
+[source, sh]
+----
+-----BEGIN CERTIFICATE-----                   
+MIIEDDCCAfSgAwIBAgIFAMwaZpcwDQYJKoZIhvcNAQELBQAwHTEbMBkGA1UEAwwS                
+V2F5ay5uZXQgQXV0aG9yaXR5MB4XDTE5MTAzMTEyNDUxOFoXDTIyMTAzMDEyNDUx
+OFowEzERMA8GA1UEAwwIV2F5ay5uZXQwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAw
+ggEKAoIBAQDE07gjQkfVth0hW62IoBMWiS0RV1ZTYkEuIpOmtRuxbFQlwZXa9LX1
+o8cGvMw2de3MSABJPkJK8yoBKgIjFX3M6phBjcxEXfjqaTD57G3yCRKWhmJFCGg3
+eWWiCa/Ym4fwgEkXqdkxeLZ8Do/JesrxyKoxyXzdrGG6vMysTUhiw6yJby2YQxsP
+U+1WIBlVV8NFK4EE5T3mfmbaXOb1ZSe90hsgkdxdq4zVCbUfaiSDushRYvKOBlTC
+kt+454T31D1wO8oPp6yARMpdi+4U5e+oxH/rrWkEdYEua4xXAA3cGTC3Qm/wzM8a
+Kmn5/Udn071OK4E4DD8exACF+RQkaIUhAgMBAAGjXTBbMAkGA1UdEwQCMAAwDgYD
+VR0PAQH/BAQDAgGgMB0GA1UdDgQWBBS7IwK7FcWHhTS5yyW9t+XawkFQQjAfBgNV
+HSMEGDAWgBRKvga9IeaTnOToUWMWj+0qOYVfATANBgkqhkiG9w0BAQsFAAOCAgEA
+PkaUZJxNJNJ86S7vHaMbl/v7SVgdTHa8IUBOQnH86giI6qmnIUgFhVaq0yXEaVOG
+DfuDVAH2zAvk4e+P9FSzBKNaxI61OnFQr0S6otOJoKdYcPby7GnEK8F/vavdbk51
+8CoDiPxTu9Ein2yTb7SF5z1DxcQB2n8pQ/QCzoXI+r8drW7ofvg860dhGoAg+Vvr
+oukLhJk/T67WEDjq00GOkm2r1DktxTmJ9Dd5Ibsp/CLHBorXWMh39kgfXBjYVki5
+65bgPHdxFvBhjsvGeF3PkYHtQXm31x74bHZ9jLyVNPA5YMRU6T9qV1ghqcKIgJYp
+68Zimq4azlF85KmnDTOnhbeQ0vF8c6v1eBpcTnMO0dGPPsuNn3DZ+0BZ/HvFcUWG
+BEI7A/qIG+pfJ1J4Jf5CEg5dLKa45/xnu/B6XhrnDwDvEVa7m1PmziTsPwxnp+7/
+DoRhgF2xKzgfg0f8KSgcQjF2ppXmpC8V3Bmko88EoDD3CdqJKyyex7RDZCqNlctk
+2aiedq3CH3kJbJbRra7AtiMq8RJdUlPzH3EwqSXoKzuSkUuyVT0xHveghajiHynJ
+MRTxIcsTtOHfcvOtH+w3obNW0VOmejJg1zE+AMZrHo57yNPLzyLMvKzcUGb8CCxr
+neLpSbwnmPKK9SUsPnRXKxMiHyRfKX6QXMMD9Ae8OCc=
+-----END CERTIFICATE---------
