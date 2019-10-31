@@ -38,6 +38,9 @@ function Start-PickyServer(
         & 'docker' 'run' '-d' '--network=picky' '--name' 'picky-mongo' 'library/mongo:4.1-bionic'
         [void](WaitForContainerRunning('picky-mongo'))
     }
+    else{
+        Write-Host "mongodb is already running"
+    }
 
     $server = $(docker container ls -qf "name=picky-server")
     if(!($server)){
@@ -66,6 +69,9 @@ function Start-PickyServer(
                 #miam
             }
         }
+    }
+    else{
+        Write-Host "docker-server is already running, you can use Restart-PickyServer"
     }
 }
 
