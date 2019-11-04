@@ -35,7 +35,7 @@ function Start-PickyServer(
 
     $mongo = $(docker container ls -qf "name=picky-mongo")
     if(!($mongo)){
-        & 'docker' 'run' '-d' '--network=picky' '--name' 'picky-mongo' 'library/mongo:4.1-bionic'
+        & 'docker' 'run' '-p' '27017:27017' '-d' '--network=picky' '--name' 'picky-mongo' 'library/mongo:4.1-bionic'
         [void](WaitForContainerRunning('picky-mongo'))
     }
     else{
