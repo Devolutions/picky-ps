@@ -137,7 +137,7 @@ Required parameters are:
 
 - `CertificateID`, The ID of the certificate
 
-- `PickyUrl`, (Facultative) the url with the port for your Picky Server, the default value is 'http://127.0.0.1:12345'
+- `PickyUrl`, (Facultative) url and port to your Picky Server, the default value is 'http://127.0.0.1:12345'
 
 
 [source, sh]
