@@ -111,7 +111,7 @@ The ID of the certificate will be returned as a result.
 ----
 
 === Get Certificates
-The list of signed certificates can be show with the command `Get-LocalCertificates`
+The list of signed certificates can be shown with the command `Get-LocalCertificates`
 
 [source, sh]
 ----
