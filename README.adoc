@@ -111,11 +111,11 @@ The ID of the certificate will be returned as a result.
 ----
 
 === Get Certificates
-The list of signed certificates can be show with the command `Get-Certificates`
+The list of signed certificates can be show with the command `Get-LocalCertificates`
 
 [source, sh]
 ----
-PS > Get-Certificates
+PS > Get-LocalCertificates
 ----
 
 The result:
@@ -148,7 +148,7 @@ PS > Save-CertificateOnServer -PickyApiKey 123456 -CertificateID 2c082069-5281-4
 === Remove Certificate
 TODO Remove Certificate on the Picky Server
 
-You can remove certificate with the command `Remove-Certificate`
+You can remove certificate with the command `Remove-LocalCertificate`
 
 The parameters are needed:
 
@@ -156,5 +156,5 @@ The parameters are needed:
 
 [source, sh]
 ----
-PS > Remove-Certificate -CertificateID 2c082069-5281-4ed4-aadb-cd0fbb15bc30
+PS > Remove-LocalCertificate -CertificateID 2c082069-5281-4ed4-aadb-cd0fbb15bc30
 ----

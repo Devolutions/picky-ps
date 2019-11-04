@@ -110,7 +110,7 @@ function Save-CertificateOnServer(
         -Body $json
 }
 
-function Remove-Certificate(
+function Remove-LocalCertificate(
     [Parameter(Mandatory=$true)]
     [string]$CertificateID
 ){
@@ -121,7 +121,7 @@ function Remove-Certificate(
     Remove-Item -Path "$picky_certificate_path/$CertificateID.csr" -Force
 }
 
-function Get-Certificates(){
+function Get-LocalCertificates(){
     $picky_certificate_path = Get-PickyConfig
     $ListItem = Get-ChildItem -Path $picky_certificate_path
 
@@ -151,4 +151,4 @@ function Get-Certificates(){
     Write-Host ($certificate_list | Format-Table | Out-String)
 }
 
-Export-ModuleMember -Function Request-Certificate, Save-CertificateOnServer, Get-Certificates, Remove-Certificate
+Export-ModuleMember -Function Request-Certificate, Save-CertificateOnServer, Get-LocalCertificates, Remove-LocalCertificate
