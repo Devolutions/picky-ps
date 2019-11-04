@@ -129,7 +129,7 @@ CN=Wayk.net Authority Marie       39f69f39-6eec-4aa3-9663-4a4ae37b90b5
 ----
 
 === Save Certificate on Server
-You can save certificate who have been signed on the backend of the Picky server with the command `Save-CertificateOnServer`
+You can save certificates that have been signed on the backend of the Picky server with the `Save-CertificateOnServer` command.
 
 The parameters are needed:
 
