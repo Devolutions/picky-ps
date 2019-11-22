@@ -1,4 +1,5 @@
 function Start-PickyServer(
+    [Parameter(Mandatory=$true, HelpMessage="Picky Server URL")]
     [string]$PickyUrl,
     [string]$PickyApiKey,
     [string]$PickyDockerImage,
@@ -6,14 +7,8 @@ function Start-PickyServer(
     [string]$PickyBackend,
     [string]$PickyDatabaseUrl
 ){
-    $PickyPort = "12345"
-    if(!($PickyUrl)){
-        $PickyUrl = 'http://127.0.0.1:12345'
-    }
-    else{
-        $uri = [System.Uri]::new($PickyUrl)
-        $PickyPort = $uri.Port
-    }
+    $uri = [System.Uri]::new($PickyUrl)
+    $PickyPort = $uri.Port
 
     if(!($PickyApiKey)){
         $PickyApiKey = [System.Guid]::NewGuid().ToString().ToUpper()
