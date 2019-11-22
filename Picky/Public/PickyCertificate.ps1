@@ -164,9 +164,12 @@ function Get-LocalCertificates(){
 }
 
 Function Save-RootCaCertificate(
-    [Parameter(Mandatory=$true)]
     [string]$PickyUrl
 ){
+    if(!($PickyUrl)){
+      $PickyUrl = 'http://127.0.0.1:12345'
+    }
+
     $contentsDen = Invoke-RestMethod -Uri "$PickyUrl/chain" -Method 'GET' -ContentType 'text/plain'
     $ca_chain_from_den = @()
     $contentsDen | Select-String  -Pattern '(?smi)^-{2,}BEGIN CERTIFICATE-{2,}.*?-{2,}END CERTIFICATE-{2,}' `
