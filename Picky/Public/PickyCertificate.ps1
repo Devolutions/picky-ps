@@ -1,9 +1,10 @@
 . "$PSScriptRoot/../Private/PickyConfig.ps1"
 . "$PSScriptRoot/../Private/RSAHelper.ps1"
 . "$PSScriptRoot/../Private/FileHelper.ps1"
+. "$PSScriptRoot/../Private/PlatformHelper.ps1"
 
 function Request-Certificate(
-    [Parameter(Mandatory=$true)]
+    [Parameter(Mandatory=$true, HelpMessage="Den Serveur URL")]
     [string]$Subject,
     [Parameter(Mandatory=$true)]
     [string]$PickyApiKey,
@@ -11,6 +12,15 @@ function Request-Certificate(
 ){
     if(!($PickyUrl)){
         $PickyUrl = 'http://127.0.0.1:12345'
+    }
+
+    $contentsDen = Invoke-RestMethod -Uri "$PickyUrl/chain" -Method 'GET' -ContentType 'text/plain'
+    $ca_chain_from_den = @()
+    $contentsDen | Select-String  -Pattern '(?smi)^-{2,}BEGIN CERTIFICATE-{2,}.*?-{2,}END CERTIFICATE-{2,}' `
+    			-Allmatches | ForEach-Object {$_.Matches} | ForEach-Object { $ca_chain_from_den += $_.Value }
+
+    if(!($ca_chain_from_den.Count -eq 2)){
+        throw "Incorrect Wayk Den CA Chain"
     }
 
     $key_size = 2048
@@ -58,7 +68,7 @@ function Request-Certificate(
         $privateKey = ExportPrivateKeyFromRSA $RSAParams
         $privateKey = $privateKey -Replace "`r`n", "`n"
     
-        $certificate_path = "$picky_certificate_path/$guid.crt"
+        $certificate_path = "$picky_certificate_path/$guid.pem"
         Add-PathIfNotExist $certificate_path
         $certificate_path = Resolve-Path -Path $certificate_path
 
@@ -72,11 +82,13 @@ function Request-Certificate(
 
         $Utf8NoBomEncoding = [System.Text.UTF8Encoding]::new($False)
 
+        $certificate = $certificate + $ca_chain_from_den[0]
+
         [System.IO.File]::WriteAllLines($csr_pem_path, $csr_pem, $Utf8NoBomEncoding)
         [System.IO.File]::WriteAllLines($private_key_path, $privateKey, $Utf8NoBomEncoding)
         [System.IO.File]::WriteAllLines($certificate_path, $certificate, $Utf8NoBomEncoding)
 
-        Write-Host $guid
+        Write-Host "$picky_certificate_path/$guid.pem"
     }
 }
 
@@ -93,7 +105,7 @@ function Save-CertificateOnServer(
 
     $picky_certificate_path = Get-PickyConfig
 
-    $certificate = Get-Content -Path "$picky_certificate_path/$CertificateID.crt" -Raw
+    $certificate = Get-Content -Path "$picky_certificate_path/$CertificateID.pem" -Raw
     $certificate = $certificate -Replace "`r`n", "`n"
 
     $headers = @{
@@ -117,7 +129,7 @@ function Remove-LocalCertificate(
     $picky_certificate_path = Get-PickyConfig
     
     Remove-Item -Path "$picky_certificate_path/$CertificateID.key" -Force
-    Remove-Item -Path "$picky_certificate_path/$CertificateID.crt" -Force
+    Remove-Item -Path "$picky_certificate_path/$CertificateID.pem" -Force
     Remove-Item -Path "$picky_certificate_path/$CertificateID.csr" -Force
 }
 
@@ -125,7 +137,7 @@ function Get-LocalCertificates(){
     $picky_certificate_path = Get-PickyConfig
     $ListItem = Get-ChildItem -Path $picky_certificate_path
 
-    $certificateRegex = '[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}.crt'
+    $certificateRegex = '[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}.pem'
     $certificate_list = New-Object System.Collections.ArrayList
 
     foreach($item in $ListItem){
@@ -151,4 +163,114 @@ function Get-LocalCertificates(){
     Write-Host ($certificate_list | Format-Table | Out-String)
 }
 
-Export-ModuleMember -Function Request-Certificate, Save-CertificateOnServer, Get-LocalCertificates, Remove-LocalCertificate
+Function Save-RootCaCertificate(
+    [Parameter(Mandatory=$true)]
+    [string]$PickyUrl
+){
+    $contentsDen = Invoke-RestMethod -Uri "$PickyUrl/chain" -Method 'GET' -ContentType 'text/plain'
+    $ca_chain_from_den = @()
+    $contentsDen | Select-String  -Pattern '(?smi)^-{2,}BEGIN CERTIFICATE-{2,}.*?-{2,}END CERTIFICATE-{2,}' `
+    			-Allmatches | ForEach-Object {$_.Matches} | ForEach-Object { $ca_chain_from_den += $_.Value }
+
+    if(!($ca_chain_from_den.Count -eq 2)){
+        throw "Incorrect Wayk Den CA Chain"
+    }
+
+    $tempDirectory = New-TemporaryDirectory
+    $DenRootCa = "$tempDirectory/root_ca.pem"
+    $Utf8NoBomEncoding = [System.Text.UTF8Encoding]::new($False)
+    [System.IO.File]::WriteAllLines($DenRootCa, $ca_chain_from_den[1], $Utf8NoBomEncoding)
+
+    Write-Host $DenRootCa
+}
+
+function Set-TrustStoreCertificate(
+    [Parameter(Mandatory=$true)]
+    [string] $RootCertificatePath
+){
+    $RootCertificatePath = Resolve-Path -Path $RootCertificatePath
+    $Cert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($RootCertificatePath)
+
+    if(Get-IsWindows){
+        if(!(Get-IsRunAsAdministrator)){
+            throw "You need to run as administrator to call this function"
+        }
+        
+        #Trust Store Windows
+        $OpenFlags = [System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite
+        $StoreLocation = [System.Security.Cryptography.X509Certificates.StoreLocation]::LocalMachine
+        $StoreName = [System.Security.Cryptography.X509Certificates.StoreName]::Root
+        $Store = new-object System.Security.Cryptography.X509Certificates.X509Store($StoreName, $StoreLocation)
+        $Store.Open($OpenFlags)
+        $Store.Add($Cert)
+        $Store.Close()
+
+        #Change the firefox settings to get the certificate from Store
+        try{
+          $firefoxPath = Resolve-Path "C:\Program Files\Mozilla Firefox\defaults\pref"
+        }
+        catch{
+          Write-Warning "Firefox is not installed, if you install Firefox, please start again this command"
+          return;
+        }
+    }
+    if($IsMacOS){
+        #Trust Store MacOS
+        & sudo security add-trusted-cert -d -k /Library/Keychains/System.keychain $RootCertificatePath
+
+        #Change the firefox settings to get the certificate from Store
+        try{
+          $firefoxPath = Resolve-Path "/Applications/Firefox.app/Contents/Resources/defaults/pref"
+        }
+        catch{
+          Write-Warning "Firefox is not installed, if you install Firefox, please start again this command"
+          return;
+        }         
+    }
+
+    #Trust Store Firefox for Windows and Macos
+    if(!$IsLinux){
+        try{
+            $name = "firefox-truststore.js"
+            $_ = New-Item -ItemType File -Path (Join-Path $firefoxPath $name)
+            $ToWrite = "pref(`"security.enterprise_roots.enabled`", true);"
+            $AsciiEncoding = [System.Text.ASCIIEncoding]::new()
+            [System.IO.File]::WriteAllLines((Join-Path $firefoxPath $name), $ToWrite, $AsciiEncoding)
+        }
+        catch{
+          Write-Warning "Firefox is not installed, if you install Firefox, please start again this command"
+        }
+    }
+
+    if($IsLinux){
+        #Trust Store Chrome
+        try{
+          certutil
+        }
+        catch{
+          Write-Host "Install libnss3 to manage root certificate" -ForegroundColor Blue
+          sudo apt-get install libnss3-tools
+        }
+
+        $PkiName = $Cert.Subject.Replace("CN=", "")
+
+        if(Test-Path "$HOME/.pki/"){
+          Write-Host "Install root_ca for Chrome" -ForegroundColor Green
+          certutil -d sql:$HOME/.pki/nssdb -A -t "CT,C,C" -n "$($PkiName)" -i $RootCertificatePath
+        }
+
+        #Trust Store Firefox
+        $ListItem = Get-ChildItem -Path $HOME/.mozilla/firefox/
+        $firefoxRegex = '[a-z0-9]{8}.default'
+
+        foreach($item in $ListItem){
+            if($item -CMatch $firefoxRegex){
+                Write-Host "Install root_ca for Firefox" -ForegroundColor Green
+                certutil -d sql:$item/ -A -t "CT,C,C" -n "$($PkiName)" -i $RootCertificatePath
+                break;
+            }
+        }
+    }
+}
+
+Export-ModuleMember -Function Request-Certificate, Save-CertificateOnServer, Get-LocalCertificates, Remove-LocalCertificate, Save-RootCaCertificate, Set-TrustStoreCertificate

@@ -1,4 +1,5 @@
 . "$PSScriptRoot/../Private/FileHelper.ps1"
+. "$PSScriptRoot/../Private/PlatformHelper.ps1"
 
 function Get-PickyConfig(){
     if (Get-IsWindows)	{
@@ -13,13 +14,4 @@ function Get-PickyConfig(){
     }
     
     return $DataPath
-}
-
-function Get-IsWindows
-{
-    if (-Not (Test-Path 'variable:global:IsWindows')) {
-        return $true # Windows PowerShell 5.1 or earlier
-    } else {
-        return $IsWindows
-    }
 }
