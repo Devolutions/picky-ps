@@ -4,23 +4,20 @@
 . "$PSScriptRoot/../Private/PlatformHelper.ps1"
 
 function Request-Certificate(
-    [Parameter(Mandatory=$true, HelpMessage="Den Serveur URL")]
+    [Parameter(Mandatory=$true, HelpMessage="Picky Server URL")]
     [string]$Subject,
     [Parameter(Mandatory=$true)]
     [string]$PickyApiKey,
+    [Parameter(Mandatory=$true, HelpMessage="Picky Server URL")]
     [string]$PickyUrl
 ){
-    if(!($PickyUrl)){
-        $PickyUrl = 'http://127.0.0.1:12345'
-    }
-
     $contentsDen = Invoke-RestMethod -Uri "$PickyUrl/chain" -Method 'GET' -ContentType 'text/plain'
     $ca_chain_from_den = @()
     $contentsDen | Select-String  -Pattern '(?smi)^-{2,}BEGIN CERTIFICATE-{2,}.*?-{2,}END CERTIFICATE-{2,}' `
     			-Allmatches | ForEach-Object {$_.Matches} | ForEach-Object { $ca_chain_from_den += $_.Value }
 
     if(!($ca_chain_from_den.Count -eq 2)){
-        throw "Incorrect Wayk Den CA Chain"
+        throw "Unexpected CA Chain"
     }
 
     $key_size = 2048
@@ -97,12 +94,9 @@ function Save-CertificateOnServer(
     [string]$PickyApiKey,
     [Parameter(Mandatory=$true)]
     [string]$CertificateID,
+    [Parameter(Mandatory=$true, HelpMessage="Picky Server URL")]
     [string]$PickyUrl
 ){
-    if(!($PickyUrl)){
-        $PickyUrl = 'http://127.0.0.1:12345'
-    }
-
     $picky_certificate_path = Get-PickyConfig
 
     $certificate = Get-Content -Path "$picky_certificate_path/$CertificateID.pem" -Raw
@@ -164,19 +158,16 @@ function Get-LocalCertificates(){
 }
 
 Function Save-RootCaCertificate(
+    [Parameter(Mandatory=$true, HelpMessage="Picky Server URL")]
     [string]$PickyUrl
 ){
-    if(!($PickyUrl)){
-      $PickyUrl = 'http://127.0.0.1:12345'
-    }
-
     $contentsDen = Invoke-RestMethod -Uri "$PickyUrl/chain" -Method 'GET' -ContentType 'text/plain'
     $ca_chain_from_den = @()
     $contentsDen | Select-String  -Pattern '(?smi)^-{2,}BEGIN CERTIFICATE-{2,}.*?-{2,}END CERTIFICATE-{2,}' `
     			-Allmatches | ForEach-Object {$_.Matches} | ForEach-Object { $ca_chain_from_den += $_.Value }
 
     if(!($ca_chain_from_den.Count -eq 2)){
-        throw "Incorrect Wayk Den CA Chain"
+      throw "Unexpected CA Chain"
     }
 
     $tempDirectory = New-TemporaryDirectory
@@ -187,7 +178,7 @@ Function Save-RootCaCertificate(
     Write-Host $DenRootCa
 }
 
-function Set-TrustStoreCertificate(
+function Install-TrustStoreCertificate(
     [Parameter(Mandatory=$true)]
     [string] $RootCertificatePath
 ){
@@ -276,4 +267,4 @@ function Set-TrustStoreCertificate(
     }
 }
 
-Export-ModuleMember -Function Request-Certificate, Save-CertificateOnServer, Get-LocalCertificates, Remove-LocalCertificate, Save-RootCaCertificate, Set-TrustStoreCertificate
+Export-ModuleMember -Function Request-Certificate, Save-CertificateOnServer, Get-LocalCertificates, Remove-LocalCertificate, Save-RootCaCertificate, Install-TrustStoreCertificate

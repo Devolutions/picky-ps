@@ -50,7 +50,7 @@ To confirm that Docker is up and running, use the `docker run hello-world` comma
 
 Start Picky, and wait for server to start: 
 
-There is facultative parameters:
+The parameters:
 
 - `PickyUrl`, the url with the port for your Picky Server, the default value is 'http://127.0.0.1:12345'
 
@@ -95,7 +95,7 @@ The parameters are needed:
 
 - `PickyApiKey`, the Api Key of your Picky Server.
 
-- `PickyUrl`, (Facultative) the url with the port for your Picky Server, the default value is 'http://127.0.0.1:12345'
+- `PickyUrl`, The url with the port for your Picky Server, the default value is 'http://127.0.0.1:12345'
 
 
 [source, sh]
@@ -137,7 +137,7 @@ Required parameters are:
 
 - `CertificateID`, The ID of the certificate
 
-- `PickyUrl`, (Facultative) url and port to your Picky Server, the default value is 'http://127.0.0.1:12345'
+- `PickyUrl`, The url and port to your Picky Server, the default value is 'http://127.0.0.1:12345'
 
 
 [source, sh]
@@ -162,9 +162,9 @@ PS > Remove-LocalCertificate -CertificateID 2c082069-5281-4ed4-aadb-cd0fbb15bc30
 === Save Root CA Certificate
 The command `Save-RootCaCertificate` will save localy the root ca of your Picky-Server
 
-The parameters are:
+The parameters are needed:
 
-- `PickyUrl`, (Facultative) url and port to your Picky Server, the default value is 'http://127.0.0.1:12345'
+- `PickyUrl`, The url and port to your Picky Server, the default value is 'http://127.0.0.1:12345'
 
 [source, sh]
 ----
