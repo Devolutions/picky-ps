@@ -249,7 +249,7 @@ function Install-TrustStoreCertificate(
         $PkiName = $Cert.Subject.Replace("CN=", "")
 
         if(Test-Path "$HOME/.pki/"){
-          Write-Host "Install root_ca for Chrome" -ForegroundColor Green
+          Write-Host "Install Root CA for Chrome" -ForegroundColor Green
           certutil -d sql:$HOME/.pki/nssdb -A -t "CT,C,C" -n "$($PkiName)" -i $RootCertificatePath
         }
 
@@ -259,7 +259,7 @@ function Install-TrustStoreCertificate(
 
         foreach($item in $ListItem){
             if($item -CMatch $firefoxRegex){
-                Write-Host "Install root_ca for Firefox" -ForegroundColor Green
+                Write-Host "Install Root CA for Firefox" -ForegroundColor Green
                 certutil -d sql:$item/ -A -t "CT,C,C" -n "$($PkiName)" -i $RootCertificatePath
                 break;
             }
@@ -267,4 +267,61 @@ function Install-TrustStoreCertificate(
     }
 }
 
-Export-ModuleMember -Function Request-Certificate, Save-CertificateOnServer, Get-LocalCertificates, Remove-LocalCertificate, Save-RootCaCertificate, Install-TrustStoreCertificate
+Function Remove-TrustStoreCertificate(
+    [Parameter(Mandatory=$true)]
+    [string] $RootCertificatePath
+){
+    $RootCertificatePath = Resolve-Path -Path $RootCertificatePath
+    $Cert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($RootCertificatePath)
+    $PkiName = $Cert.Subject.Replace("CN=", "")
+
+    if(Get-IsWindows){
+        if(!(Get-IsRunAsAdministrator)){
+            throw "You need to run as administrator to call this function"
+        }
+        
+        #Trust Store Windows
+        $OpenFlags = [System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite
+        $StoreLocation = [System.Security.Cryptography.X509Certificates.StoreLocation]::LocalMachine
+        $StoreName = [System.Security.Cryptography.X509Certificates.StoreName]::Root
+        $Store = new-object System.Security.Cryptography.X509Certificates.X509Store($StoreName, $StoreLocation)
+        $Store.Open($OpenFlags)
+        $Store.Remove($Cert)
+        $Store.Close()
+    }
+
+    if($IsMacOS){
+        #Trust Store MacOS
+        & sudo security delete-certificate -c $PkiName /Library/Keychains/System.keychain
+    }
+
+    if($IsLinux){
+        #Trust Store Chrome
+        try{
+          certutil
+        }
+        catch{
+          Write-Host "Install libnss3 to manage root certificate" -ForegroundColor Blue
+          sudo apt-get install libnss3-tools
+        }
+
+        if(Test-Path "$HOME/.pki/"){
+          Write-Host "Remove Root CA for Chrome" -ForegroundColor Green
+          certutil -d sql:$HOME/.pki/nssdb -D -n "$($PkiName)"
+        }
+
+        #Trust Store Firefox
+        $ListItem = Get-ChildItem -Path $HOME/.mozilla/firefox/
+        $firefoxRegex = '[a-z0-9]{8}.default'
+
+        foreach($item in $ListItem){
+            if($item -CMatch $firefoxRegex){
+                Write-Host "Remove Root CA for Firefox" -ForegroundColor Green
+                certutil -d sql:$item/ -D -n "$($PkiName)"
+                break;
+            }
+        }
+    }
+}
+
+Export-ModuleMember -Function Request-Certificate, Save-CertificateOnServer, Get-LocalCertificates, Remove-LocalCertificate, Save-RootCaCertificate, Install-TrustStoreCertificate, Remove-TrustStoreCertificate
