@@ -14,7 +14,7 @@ function Start-PickyServer(
         $PickyApiKey = [System.Guid]::NewGuid().ToString().ToUpper()
     }
     if(!($PickyDockerImage)){
-        $PickyDockerImage = 'devolutions/picky:3.3.0-buster-dev'
+        $PickyDockerImage = 'devolutions/picky:4.1.0-buster-dev'
     }
     if(!($PickyRealm)){
         $PickyRealm = 'wayk.net'
