@@ -268,25 +268,46 @@ function Install-TrustStoreCertificate(
 }
 
 Function Remove-TrustStoreCertificate(
-    [Parameter(Mandatory=$true)]
-    [string] $RootCertificatePath
+    [string] $RootCertificatePath,
+    [string] $RootCertificateName
 ){
-    $RootCertificatePath = Resolve-Path -Path $RootCertificatePath
-    $Cert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($RootCertificatePath)
-    $PkiName = $Cert.Subject.Replace("CN=", "")
+    if($RootCertificatePath){
+        $RootCertificatePath = Resolve-Path -Path $RootCertificatePath
+        $Cert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($RootCertificatePath)
+        $PkiName = $Cert.Subject.Replace("CN=", "")
+    }
+    elseif($RootCertificateName){
+        $PkiName = $RootCertificateName
+    }
+    else{
+        throw "You need to specify the Root Certificate path, or the Root Certificate name"
+    }
 
+    #Trust Store Windows
     if(Get-IsWindows){
         if(!(Get-IsRunAsAdministrator)){
             throw "You need to run as administrator to call this function"
         }
-        
-        #Trust Store Windows
         $OpenFlags = [System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite
         $StoreLocation = [System.Security.Cryptography.X509Certificates.StoreLocation]::LocalMachine
         $StoreName = [System.Security.Cryptography.X509Certificates.StoreName]::Root
         $Store = new-object System.Security.Cryptography.X509Certificates.X509Store($StoreName, $StoreLocation)
         $Store.Open($OpenFlags)
-        $Store.Remove($Cert)
+
+        if ($RootCertificateName) {
+            foreach($item in $Store.Certificates)
+            {
+                if($item.Subject.Contains($RootCertificateName))
+                {
+                    $Cert = $item
+                    break;
+                }
+            }
+        }
+
+        if($Cert){
+            $Store.Remove($Cert)
+        }
         $Store.Close()
     }
 
